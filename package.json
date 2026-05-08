@@ -2,7 +2,7 @@
   "name": "aivon-voice-assistant",
   "private": true,
   "version": "1.0.0",
-  "description": "Premium AI-powered bilingual (English & Hausa) telecom-inspired student support assistant for Federal University Dutsin-Ma (FUDMA).",
+  "description": "Premium AI-powered Trilingual (English, Hausa & Arabic) telecom-inspired student support assistant for Federal University Dutsin-Ma (FUDMA).",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
