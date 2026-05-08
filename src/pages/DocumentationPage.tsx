@@ -29,7 +29,7 @@ export default function DocumentationPage() {
         <DocCard 
           icon={<Globe className="w-6 h-6 text-accent" />}
           title="Multilingual Support"
-          description="Native support for English and Hausa, ensuring accessibility for the entire university community regardless of language preference."
+          description="Native support for English, Hausa, and Arabic, ensuring accessibility for the entire university community regardless of language preference."
         />
         <DocCard 
           icon={<Shield className="w-6 h-6 text-accent" />}

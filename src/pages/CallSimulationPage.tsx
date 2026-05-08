@@ -15,7 +15,7 @@ import {
 import { GoogleGenAI } from "@google/genai";
 
 type CallState = "idle" | "dialing" | "active" | "ended";
-type Language = "english" | "hausa";
+type Language = "english" | "hausa" | "arabic";
 
 interface Message {
   role: "user" | "assistant";
@@ -45,8 +45,14 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const recognitionRef = useRef<any>(null);
+  useEffect(() => {
+    if (showTranscript && messages.length > 0) {
+      const anchor = document.getElementById("anchor");
+      anchor?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, showTranscript, isThinking]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -84,8 +90,10 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
       }, 1000);
       
       const welcomeMsg = language === "english" 
-        ? "Welcome to Federal University Dutsin-Ma Voice Assistant. To continue in Hausa, press 1. How can I assist you with your studies today?" 
-        : "Barka da zuwa mataimakin muryar Jami'ar Dutsin-Ma. Don ci gaba da Hausa, danna daya. Ta yaya zan taimake ku da karatun ku yau?";
+        ? "Welcome to Federal University Dutsin-Ma Voice Assistant. To continue in Hausa, press 1. For Arabic, press 2. How can I assist you with your studies today?" 
+        : language === "hausa" 
+          ? "Barka da zuwa mataimakin muryar Jami'ar Dutsin-Ma. Don ci gaba da Hausa, danna daya. Domin Larabci, danna biyu."
+          : "أهلاً بك في مساعد صوت جامعة دوتسين-ما الفيدرالية. للاستمرار في الهوسا، اضغط ١. للعربية، اضغط ٢.";
       
       handleAssistantResponse(welcomeMsg);
       setHasGreeted(true);
@@ -154,6 +162,11 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
         const msg = "Hausa protocol initialized. Ta yaya zan iya taimaka muku da karatun ku na FUDMA a yau?";
         handleAssistantResponse(msg);
         setShowKeypad(false);
+      } else if (number === "2" || number.endsWith("2")) {
+        setLanguage("arabic");
+        const msg = "Arabic protocol initialized. مرحباً بكم في مساعد جامعة FUDMA الصوتي. كيف يمكنني مساعدتكم اليوم؟";
+        handleAssistantResponse(msg);
+        setShowKeypad(false);
       }
       return;
     }
@@ -206,7 +219,7 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = language === "english" ? "en-US" : "ha-NG";
+    recognition.lang = language === "english" ? "en-US" : language === "hausa" ? "ha-NG" : "ar-SA";
     recognition.continuous = false;
     recognition.interimResults = false;
 
@@ -237,6 +250,7 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
         Current Language: ${language}.
         If language is hausa, respond strictly in Hausa.
         If language is english, respond strictly in English.
+        If language is arabic, respond strictly in Arabic.
         Be concise, supportive, and professional.
         Focus on student registration, courses, campus life, and general inquiries.
       `;
@@ -279,6 +293,10 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
         (v.lang.startsWith("ha") || v.name.toLowerCase().includes("female")) && 
         v.name.toLowerCase().includes("female")
       ) || voices.find(v => v.lang.startsWith("ha"));
+    } else if (language === "arabic") {
+      utterance.lang = "ar-SA";
+      preferredVoice = voices.find(v => v.lang.startsWith("ar") && v.name.toLowerCase().includes("female")) || 
+                       voices.find(v => v.lang.startsWith("ar"));
     } else {
       utterance.lang = "en-US";
       preferredVoice = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"));
@@ -334,8 +352,10 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
-              "w-full h-full max-w-5xl mx-auto flex flex-col transition-all duration-700",
-              showTranscript ? "lg:grid lg:grid-cols-[1fr_400px] gap-8" : "max-w-2xl"
+              "w-full h-full mx-auto flex flex-col transition-all duration-700",
+              showTranscript 
+                ? "max-w-6xl lg:grid lg:grid-cols-[1fr_450px] gap-12" 
+                : "max-w-2xl flex-col"
             )}
           >
             {/* Top info bar */}
@@ -455,34 +475,33 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
               </main>
             </div>
 
-            {/* Transcript (Side Panel / Mobile Below) */}
             <AnimatePresence>
               {showTranscript && (
                 <motion.aside 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
                   className={cn(
-                    "flex flex-col bg-surface border border-border rounded-[40px] overflow-hidden backdrop-blur-3xl shadow-2xl transition-all",
-                    "lg:h-[700px] w-full",
+                    "flex flex-col bg-surface/40 border border-border rounded-[40px] overflow-hidden backdrop-blur-3xl shadow-2xl transition-all",
+                    "lg:h-[650px] w-full",
                     !showTranscript && "hidden"
                   )}
                 >
                   <div className="px-6 py-5 border-b border-border bg-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MessageCircle className="w-4 h-4 text-accent" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Network History</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Network Stream</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setShowTranscript(false)} className="h-6 w-6 p-0 text-text-secondary">
+                    <Button variant="ghost" size="sm" onClick={() => setShowTranscript(false)} className="h-6 w-6 p-0 text-text-secondary hover:text-white">
                       ×
                     </Button>
                   </div>
-                  <ScrollArea className="flex-grow p-6 min-h-[300px]">
-                    <div className="space-y-6">
+                  <ScrollArea className="flex-grow p-6">
+                    <div className="space-y-6 pb-4">
                       {messages.length === 0 && (
                         <div className="h-60 flex flex-col items-center justify-center text-white/10 italic text-xs gap-4">
                           <Disc className="w-12 h-12 opacity-10 animate-spin-slow" />
-                          Awaiting Signal Initialization...
+                          Awaiting Neural Handshake...
                         </div>
                       )}
                       {messages.map((m, i) => (
@@ -495,22 +514,30 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
                             m.role === 'user' ? "items-end" : "items-start"
                           )}
                         >
+                          <span className="text-[9px] uppercase tracking-widest text-white/20 font-bold mb-2">
+                            {m.role === 'user' ? 'Student' : 'Aivon Node-01'}
+                          </span>
                           <div className={cn(
-                            "max-w-[90%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed shadow-sm",
+                            "max-w-[95%] px-5 py-4 rounded-3xl text-[14px] leading-relaxed shadow-lg",
                             m.role === 'user' 
                               ? "bg-white/5 border border-border rounded-tr-none text-text-secondary" 
-                              : "bg-accent/10 border border-accent/20 rounded-tl-none text-white"
+                              : "bg-accent/10 border border-accent/20 rounded-tl-none text-white ring-1 ring-accent/5"
                           )}>
                             {m.content}
                           </div>
                         </motion.div>
                       ))}
                       {isThinking && (
-                        <div className="flex items-center gap-2 text-text-secondary text-[10px] uppercase font-bold tracking-[2px] animate-pulse">
-                          <Disc className="w-3 h-3 animate-spin" />
-                          Aivon Processing Data
+                        <div className="flex items-center gap-3 text-accent text-[10px] uppercase font-bold tracking-[2px] animate-pulse">
+                          <div className="flex gap-1">
+                            <span className="w-1 h-1 rounded-full bg-accent animate-bounce" />
+                            <span className="w-1 h-1 rounded-full bg-accent animate-bounce [animation-delay:0.2s]" />
+                            <span className="w-1 h-1 rounded-full bg-accent animate-bounce [animation-delay:0.4s]" />
+                          </div>
+                          Processing Protocol
                         </div>
                       )}
+                      <div id="anchor" />
                     </div>
                   </ScrollArea>
                 </motion.aside>
