@@ -1,0 +1,14 @@
+export default function Footer() {
+  return (
+    <footer className="border-t border-white/5 bg-[#050505] py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <p className="text-sm text-white/40">
+          © {new Date().getFullYear()} Aivon • Federal University Dutsin-Ma (FUDMA)
+        </p>
+        <p className="text-xs text-white/20 mt-2">
+          Telecom AI Simulation • MSc Thesis Prototype
+        </p>
+      </div>
+    </footer>
+  );
+}
