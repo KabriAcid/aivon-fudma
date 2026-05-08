@@ -7,5 +7,15 @@ coverage/
 .env*
 !.env.example
 recordings/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+sessions/
 
 /src/generated/prisma
+
+# Add all python and Sqlite + Prisma ignore file
+*.db
