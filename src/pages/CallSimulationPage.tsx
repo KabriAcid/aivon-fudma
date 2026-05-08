@@ -62,6 +62,14 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   useEffect(() => {
     onCallStateChange?.(callState === "active" || callState === "dialing");
 
+    if (callState === "active" || callState === "dialing") {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+      document.documentElement.style.overflow = "unset";
+    }
+
     if (callState === "active" && !hasGreeted) {
       timerRef.current = setInterval(() => {
         setDuration(prev => prev + 1);
@@ -255,95 +263,87 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
             </div>
 
             {/* Main Stage */}
-            <main className="w-full bg-transparent p-4 lg:p-8 flex flex-col items-center justify-center gap-10 relative overflow-hidden h-full backdrop-blur-3xl transition-all">
+            <main className="w-full bg-transparent p-4 lg:p-8 flex flex-col items-center justify-center gap-12 relative overflow-hidden h-full backdrop-blur-3xl transition-all">
               <div className="text-center">
-                <div className="font-mono text-6xl lg:text-8xl tracking-tight font-bold text-white mb-2 transition-all">
+                <div className="font-mono text-7xl md:text-8xl lg:text-9xl tracking-tighter font-bold text-white mb-4 transition-all">
                   {formatDuration(duration)}
                 </div>
-                <div className="text-[10px] uppercase tracking-[6px] text-accent font-bold opacity-40 ml-1">
+                <div className="text-[10px] uppercase tracking-[8px] text-accent font-bold opacity-30 ml-2">
                    ENCRYPTED SIGNAL
                 </div>
               </div>
 
               <div className="relative group">
-                <div className="absolute inset-0 bg-accent/10 blur-[100px] rounded-full scale-110 transition-transform duration-1000 group-hover:scale-125" />
+                <div className="absolute inset-0 bg-accent/10 blur-[120px] rounded-full scale-110 transition-transform duration-1000 group-hover:scale-125" />
                 <div className={cn(
-                  "relative w-44 h-44 lg:w-64 lg:h-64 rounded-full border border-white/5 transition-all duration-700 flex items-center justify-center bg-white/[0.02] backdrop-blur-2xl",
+                  "relative w-56 h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 rounded-full border border-white/5 transition-all duration-700 flex items-center justify-center bg-white/[0.02] backdrop-blur-2xl",
                   isThinking && "scale-105",
-                  isSpeaking && "scale-110 bg-accent/5 border-accent/20 shadow-[0_0_80px_var(--color-accent-glow)]"
+                  isSpeaking && "scale-110 bg-accent/5 border-accent/20 shadow-[0_0_100px_var(--color-accent-glow)]"
                 )}>
-                  <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={20} />
+                  <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={24} />
                 </div>
               </div>
 
               <div className="text-center w-full">
-                <h2 className="text-2xl font-bold mb-4">Aivon Assistant</h2>
-                
                 {/* Action Grid */}
-                <div className="grid grid-cols-3 gap-3 w-full max-w-sm mx-auto">
+                <div className="grid grid-cols-3 gap-6 w-full max-w-sm mx-auto p-4">
                    <Button 
                      variant="ghost"
                      onClick={() => setIsMuted(!isMuted)}
                      className={cn(
-                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
                        isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/5 text-text-secondary hover:text-white"
                      )}
                    >
-                     {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                     <span className="text-[8px] font-bold uppercase tracking-widest">Mute</span>
+                     {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                    </Button>
 
                    <Button 
                      variant="ghost"
                      onClick={() => setShowKeypad(true)}
-                     className="flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border bg-white/5 text-text-secondary hover:text-white transition-all"
+                     className="flex items-center justify-center w-full aspect-square rounded-full border border-border bg-white/5 text-text-secondary hover:text-white transition-all"
                    >
-                     <Hash className="w-4 h-4" />
-                     <span className="text-[8px] font-bold uppercase tracking-widest">Keypad</span>
+                     <Hash className="w-6 h-6" />
                    </Button>
 
                    <Button 
                      variant="ghost"
                      onClick={() => setIsSpeakerOn(!isSpeakerOn)}
                      className={cn(
-                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
                        isSpeakerOn ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
                      )}
                    >
-                     <Speaker className="w-4 h-4" />
-                     <span className="text-[8px] font-bold uppercase tracking-widest">Speaker</span>
+                     <Speaker className="w-6 h-6" />
                    </Button>
 
                    <Button 
                      variant="ghost"
                      onClick={() => setIsRecording(!isRecording)}
                      className={cn(
-                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
                        isRecording ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-white/5 text-text-secondary hover:text-white"
                      )}
                    >
-                     <Disc className={cn("w-4 h-4", isRecording && "animate-pulse")} />
-                     <span className="text-[8px] font-bold uppercase tracking-widest">Record</span>
+                     <Disc className={cn("w-6 h-6", isRecording && "animate-pulse")} />
                    </Button>
 
                    <Button 
                      variant="ghost"
                      onClick={() => setShowTranscript(!showTranscript)}
                      className={cn(
-                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
                        showTranscript ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
                      )}
                    >
-                     <LayoutList className="w-4 h-4" />
-                     <span className="text-[8px] font-bold uppercase tracking-widest">Logs</span>
+                     <LayoutList className="w-6 h-6" />
                    </Button>
 
                    <Button 
                      onClick={() => setShowConfirmCancel(true)}
-                     className="bg-red-500 hover:bg-red-600 text-white flex flex-col h-16 rounded-full aspect-square p-0 gap-1 shadow-xl shadow-red-500/20"
+                     className="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center w-full aspect-square rounded-full shadow-2xl shadow-red-500/30"
                    >
-                     <PhoneOff className="w-4 h-4" />
-                     <span className="text-[8px] font-bold uppercase tracking-widest">End</span>
+                     <PhoneOff className="w-6 h-6" />
                    </Button>
                 </div>
               </div>
