@@ -13,6 +13,7 @@ npm install
 ```
 
 Installs:
+
 - `@prisma/client` - ORM
 - `@prisma/cli` - Migration tools
 - `@google/generative-ai` - Gemini API
@@ -31,6 +32,7 @@ npm run db:studio
 ```
 
 **Files Created:**
+
 - `prisma/schema.prisma` - 6 models (Department, FAQ, Contact, AcademicInfo, Session, Conversation)
 - `prisma/seed.ts` - Bilingual seed data (English & Hausa)
 - `prisma/dev.db` - SQLite database file
@@ -55,6 +57,7 @@ const faqs = await retriever.searchFAQs("admission", "english");
 ```
 
 **Features:**
+
 - Category detection (admission, academics, counselling, contacts, departments)
 - Relevance scoring (keyword matching)
 - Language-specific results
@@ -80,6 +83,7 @@ const result = await aiService.process({
 ```
 
 **Process Flow:**
+
 1. Search institutional knowledge base
 2. Format results for prompt injection
 3. Build system prompt with context
@@ -91,6 +95,7 @@ const result = await aiService.process({
 #### POST /api/process
 
 **Request:**
+
 ```json
 {
   "message": "What are the admission requirements?",
@@ -100,10 +105,13 @@ const result = await aiService.process({
 ```
 
 **Response:**
+
 ```json
 {
   "response": "Admission requirements include: UTME score of minimum 180...",
-  "contextUsed": ["What are the admission requirements for undergraduate programs?"],
+  "contextUsed": [
+    "What are the admission requirements for undergraduate programs?"
+  ],
   "sources": ["FAQs", "Academic Information"]
 }
 ```
@@ -111,6 +119,7 @@ const result = await aiService.process({
 #### POST /api/chat (Fallback)
 
 **Request:**
+
 ```json
 {
   "text": "Hello, how can you help?",
@@ -119,6 +128,7 @@ const result = await aiService.process({
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Hello! I'm here to help with questions about FUDMA..."
@@ -159,15 +169,14 @@ export function useKnowledgeAssistant() {
 
         return data;
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : "Unknown error";
+        const msg = err instanceof Error ? err.message : "Unknown error";
         setError(msg);
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   return { response, sources, loading, error, query };
@@ -401,10 +410,12 @@ npm run db:studio
 ## 9. Performance Considerations
 
 ### Database Indexing
+
 - Indexed on `category` and `language` for fast queries
 - Supports up to 10,000+ records efficiently
 
 ### Caching (Optional)
+
 ```typescript
 const cache = new Map<string, any>();
 
@@ -419,20 +430,21 @@ async function cachedQuery(msg: string, lang: string) {
 ```
 
 ### Retrieval Optimization
+
 - Top 3 results per category (limits prompt size)
 - Relevance scoring (most relevant first)
 - Category detection (targeted searches)
 
 ## 10. Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| "Database not found" | Run `npm run db:push` |
-| Empty search results | Run `npm run db:seed` |
-| API 500 errors | Check GEMINI_API_KEY in .env |
-| Slow responses | Implement caching, check DB indexes |
-| TypeScript errors | Run `npx prisma generate` |
-| Frontend hook not found | Create useKnowledgeAssistant.ts |
+| Issue                   | Solution                            |
+| ----------------------- | ----------------------------------- |
+| "Database not found"    | Run `npm run db:push`               |
+| Empty search results    | Run `npm run db:seed`               |
+| API 500 errors          | Check GEMINI_API_KEY in .env        |
+| Slow responses          | Implement caching, check DB indexes |
+| TypeScript errors       | Run `npx prisma generate`           |
+| Frontend hook not found | Create useKnowledgeAssistant.ts     |
 
 ## 11. Next Steps
 

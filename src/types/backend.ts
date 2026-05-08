@@ -158,7 +158,7 @@ export class ServiceError extends Error {
   constructor(
     public code: string,
     message: string,
-    public details?: Record<string, any>
+    public details?: Record<string, any>,
   ) {
     super(message);
     this.name = "ServiceError";
@@ -171,9 +171,7 @@ export function isValidLanguage(lang: string): lang is Language {
   return ["english", "hausa", "arabic"].includes(lang.toLowerCase());
 }
 
-export function validateProcessRequest(
-  req: unknown
-): req is ProcessRequest {
+export function validateProcessRequest(req: unknown): req is ProcessRequest {
   if (typeof req !== "object" || req === null) return false;
   const obj = req as Record<string, unknown>;
   return (
@@ -184,7 +182,7 @@ export function validateProcessRequest(
 }
 
 export function validateRecordingRequest(
-  req: unknown
+  req: unknown,
 ): req is RecordingRequest {
   if (typeof req !== "object" || req === null) return false;
   const obj = req as Record<string, unknown>;

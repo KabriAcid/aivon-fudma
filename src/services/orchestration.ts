@@ -1,5 +1,5 @@
 import { InstitutionalRetriever } from "./retrieval";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 interface ProcessingRequest {
   message: string;
@@ -19,12 +19,12 @@ interface ProcessingResponse {
  * Retrieves institutional knowledge → constructs enhanced prompt → calls Gemini API
  */
 export class AIOrchestrationService {
-  private genai: GoogleGenerativeAI;
+  private genai: GoogleGenAI;
   private retriever: InstitutionalRetriever;
   private model = "gemini-1.5-flash";
 
   constructor(apiKey: string) {
-    this.genai = new GoogleGenerativeAI(apiKey);
+    this.genai = new GoogleGenAI({ apiKey });
     this.retriever = new InstitutionalRetriever();
   }
 
@@ -163,24 +163,16 @@ Now, please assist the user with their inquiry.`;
       const systemPrompt = this.buildSystemPrompt(language, formattedContext);
 
       // Step 4: Call Gemini API
-      const model = this.genai.getGenerativeModel({ model: this.model });
-
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: request.message,
-              },
-            ],
-          },
-        ],
-        systemInstruction: systemPrompt,
+      const result = await this.genai.models.generateContent({
+        model: this.model,
+        contents: request.message,
+        config: {
+          systemInstruction: systemPrompt,
+        },
       });
 
       const response =
-        result.response.text() ||
+        result.text ||
         "I was unable to generate a response. Please try again.";
 
       // Step 5: Extract sources used
@@ -206,11 +198,11 @@ Now, please assist the user with their inquiry.`;
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const model = this.genai.getGenerativeModel({
-        model: this.model,
-      });
       // Test with minimal request
-      await model.generateContent("test");
+      await this.genai.models.generateContent({
+        model: this.model,
+        contents: "test",
+      });
       return true;
     } catch (error) {
       console.error("AI service health check failed:", error);
