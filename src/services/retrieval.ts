@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import knowledgeBase from "../../prisma/knowledge_base.json";
 
 interface RetrievalResult {
   faqs?: any[];
@@ -17,16 +15,15 @@ interface SearchContext {
 }
 
 /**
- * InstitutionalRetriever: Lightweight keyword-based search for FUDMA knowledge base
- * No vector embeddings - just pattern matching and relevance scoring
+ * InstitutionalRetriever: Fast JSON-based search for FUDMA knowledge base
  */
 export class InstitutionalRetriever {
+  private data = knowledgeBase;
   private keywords: {
     [key: string]: string[];
   } = {
     admission: [
       "admission",
-      "apply",
       "apply",
       "entry",
       "requirement",
@@ -91,7 +88,7 @@ export class InstitutionalRetriever {
     // Individual word matches
     const queryWords = lowerQuery.split(/\s+/);
     queryWords.forEach((word) => {
-      if (lowerText.includes(word) && word.length > 3) {
+      if (word.length > 3 && lowerText.includes(word)) {
         score += 2;
       }
     });
@@ -103,7 +100,7 @@ export class InstitutionalRetriever {
    * Detect query category based on keywords
    */
   private detectCategory(query: string): string[] {
-    const detectedCategories = [];
+    const detectedCategories: string[] = [];
     const lowerQuery = query.toLowerCase();
 
     Object.entries(this.keywords).forEach(([category, words]) => {
@@ -122,11 +119,7 @@ export class InstitutionalRetriever {
     query: string,
     language: string = "english",
   ): Promise<any[]> {
-    const faqs = await prisma.fAQ.findMany({
-      where: {
-        language,
-      },
-    });
+    const faqs = this.data.faqs.filter(f => f.language === language);
 
     return faqs
       .map((faq) => ({
@@ -138,7 +131,7 @@ export class InstitutionalRetriever {
       }))
       .filter((faq) => faq.relevanceScore > 0)
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 3); // Return top 3
+      .slice(0, 3);
   }
 
   /**
@@ -148,11 +141,7 @@ export class InstitutionalRetriever {
     query: string,
     language: string = "english",
   ): Promise<any[]> {
-    const info = await prisma.academicInfo.findMany({
-      where: {
-        language,
-      },
-    });
+    const info = this.data.academicInfo.filter(f => f.language === language);
 
     return info
       .map((item) => ({
@@ -164,14 +153,14 @@ export class InstitutionalRetriever {
       }))
       .filter((item) => item.relevanceScore > 0)
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 3); // Return top 3
+      .slice(0, 3);
   }
 
   /**
-   * Search contacts by office name or query
+   * Search contacts
    */
   async searchContacts(query: string): Promise<any[]> {
-    const contacts = await prisma.contact.findMany();
+    const contacts = this.data.contacts;
 
     return contacts
       .map((contact) => ({
@@ -190,7 +179,7 @@ export class InstitutionalRetriever {
    * Search departments
    */
   async searchDepartments(query: string): Promise<any[]> {
-    const departments = await prisma.department.findMany();
+    const departments = this.data.departments;
 
     return departments
       .map((dept) => ({
@@ -215,77 +204,36 @@ export class InstitutionalRetriever {
   ): Promise<SearchContext> {
     try {
       const categories = this.detectCategory(query);
+      const results: RetrievalResult = {};
 
-      let results: RetrievalResult = {};
-      const promises = [];
+      const searches = [];
 
-      // Search based on detected categories
       if (categories.includes("admission") || categories.includes("general")) {
-        promises.push(
-          this.searchFAQs(query, language)
-            .then((res) => {
-              results.faqs = res;
-            })
-            .catch(() => {
-              results.faqs = [];
-            }),
-        );
+        searches.push(this.searchFAQs(query, language).then(res => results.faqs = res));
       }
 
       if (categories.includes("academics") || categories.includes("general")) {
-        promises.push(
-          this.searchAcademicInfo(query, language)
-            .then((res) => {
-              results.academicInfo = res;
-            })
-            .catch(() => {
-              results.academicInfo = [];
-            }),
-        );
+        searches.push(this.searchAcademicInfo(query, language).then(res => results.academicInfo = res));
       }
 
-      if (
-        categories.includes("contacts") ||
-        categories.includes("departments")
-      ) {
-        promises.push(
-          this.searchContacts(query)
-            .then((res) => {
-              results.contacts = res;
-            })
-            .catch(() => {
-              results.contacts = [];
-            }),
-        );
-
-        promises.push(
-          this.searchDepartments(query)
-            .then((res) => {
-              results.departments = res;
-            })
-            .catch(() => {
-              results.departments = [];
-            }),
-        );
+      if (categories.includes("contacts") || categories.includes("departments")) {
+        searches.push(this.searchContacts(query).then(res => results.contacts = res));
+        searches.push(this.searchDepartments(query).then(res => results.departments = res));
       }
 
-      // Always search general resources
-      if (!promises.length) {
-        results.faqs = await this.searchFAQs(query, language).catch(() => []);
-        results.academicInfo = await this.searchAcademicInfo(
-          query,
-          language,
-        ).catch(() => []);
+      // If nothing detected, search all
+      if (searches.length === 0) {
+        searches.push(this.searchFAQs(query, language).then(res => results.faqs = res));
+        searches.push(this.searchAcademicInfo(query, language).then(res => results.academicInfo = res));
       }
 
-      await Promise.all(promises);
+      await Promise.all(searches);
 
-      // Generate summary
       const hasResults =
-        (results.faqs && results.faqs.length > 0) ||
-        (results.academicInfo && results.academicInfo.length > 0) ||
-        (results.contacts && results.contacts.length > 0) ||
-        (results.departments && results.departments.length > 0);
+        (results.faqs?.length || 0) > 0 ||
+        (results.academicInfo?.length || 0) > 0 ||
+        (results.contacts?.length || 0) > 0 ||
+        (results.departments?.length || 0) > 0;
 
       const summary = this.generateSummary(results, hasResults);
 
@@ -298,52 +246,24 @@ export class InstitutionalRetriever {
       console.error("Retrieval error:", error);
       return {
         results: {},
-        summary: "Unable to retrieve institutional information at this time.",
+        summary: "Error searching knowledge base.",
         hasResults: false,
       };
     }
   }
 
-  /**
-   * Generate plain text summary of retrieved results
-   */
-  private generateSummary(
-    results: RetrievalResult,
-    hasResults: boolean,
-  ): string {
-    if (!hasResults) {
-      return "No relevant information found in the knowledge base.";
-    }
-
+  private generateSummary(results: RetrievalResult, hasResults: boolean): string {
+    if (!hasResults) return "No matches found.";
     const parts = [];
-
-    if (results.faqs && results.faqs.length > 0) {
-      parts.push(`Found ${results.faqs.length} FAQ(s) matching your query.`);
-      results.faqs.forEach((faq) => {
-        parts.push(`- Q: ${faq.question}`);
-      });
+    if (results.faqs?.length) {
+      parts.push(`Retrieved ${results.faqs.length} FAQ items.`);
     }
-
-    if (results.academicInfo && results.academicInfo.length > 0) {
-      parts.push(
-        `Found ${results.academicInfo.length} academic information item(s).`,
-      );
-      results.academicInfo.forEach((info) => {
-        parts.push(`- ${info.title}`);
-      });
+    if (results.academicInfo?.length) {
+      parts.push(`Retrieved ${results.academicInfo.length} academic guides.`);
     }
-
-    if (results.contacts && results.contacts.length > 0) {
-      parts.push(`Found ${results.contacts.length} contact(s) that may help.`);
-    }
-
-    if (results.departments && results.departments.length > 0) {
-      parts.push(`Found ${results.departments.length} relevant department(s).`);
-    }
-
-    return parts.join("\n");
+    return parts.join(" ");
   }
 }
 
-// Export singleton instance
 export const retriever = new InstitutionalRetriever();
+

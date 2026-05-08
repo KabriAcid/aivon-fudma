@@ -19,3 +19,4 @@ sessions/
 
 # Add all python and Sqlite + Prisma ignore file
 *.db
+package-lock.json

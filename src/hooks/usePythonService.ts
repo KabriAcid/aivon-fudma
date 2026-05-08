@@ -18,7 +18,7 @@ export function usePythonService() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pythonUrl = "http://localhost:5000";
-  const connectionTimeoutRef = useRef<NodeJS.Timeout>();
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Test connection to Python service
   useEffect(() => {

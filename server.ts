@@ -67,8 +67,7 @@ async function startServer() {
         },
       });
 
-      const assistantMessage =
-        response.text || "I'm sorry, I couldn't process that.";
+      const assistantMessage = response.text || "I'm sorry, I couldn't process that.";
       res.json({ message: assistantMessage });
     } catch (error) {
       console.error("AI Error:", error);

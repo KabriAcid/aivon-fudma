@@ -21,7 +21,7 @@ interface ProcessingResponse {
 export class AIOrchestrationService {
   private genai: GoogleGenAI;
   private retriever: InstitutionalRetriever;
-  private model = "gemini-1.5-flash";
+  private model = "gemini-3-flash-preview";
 
   constructor(apiKey: string) {
     this.genai = new GoogleGenAI({ apiKey });
@@ -171,15 +171,13 @@ Now, please assist the user with their inquiry.`;
         },
       });
 
-      const response =
-        result.text ||
-        "I was unable to generate a response. Please try again.";
+      const responseText = result.text || "I was unable to generate a response. Please try again.";
 
       // Step 5: Extract sources used
       const sources = this.extractSources(searchContext.results);
 
       return {
-        response,
+        response: responseText,
         contextUsed:
           searchContext.results.faqs?.map((f: any) => f.question) || [],
         sources,
@@ -198,7 +196,6 @@ Now, please assist the user with their inquiry.`;
    */
   async healthCheck(): Promise<boolean> {
     try {
-      // Test with minimal request
       await this.genai.models.generateContent({
         model: this.model,
         contents: "test",

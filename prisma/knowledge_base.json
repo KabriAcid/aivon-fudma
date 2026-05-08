@@ -1,0 +1,111 @@
+{
+  "faqs": [
+    {
+      "id": "1",
+      "question": "How do I register for courses?",
+      "answer": "Log in to the student portal, navigate to the registration tab, select your courses for the semester, and click submit for advisor approval.",
+      "category": "Academics",
+      "language": "english"
+    },
+    {
+      "id": "2",
+      "question": "What are the requirements for new students?",
+      "answer": "New students need their JAMB admission letter, O-level results, birth certificate, and proof of state of origin for physical screening.",
+      "category": "Admission",
+      "language": "english"
+    },
+    {
+      "id": "3",
+      "question": "Where is the University Library located?",
+      "answer": "The Main Library is located at the center of the campus, adjacent to the Senate Building.",
+      "category": "Counselling",
+      "language": "english"
+    },
+    {
+      "id": "4",
+      "question": "Yaya ake yin rajistar kwas?",
+      "answer": "Shiga cikin shafin dalibai (portal), sannan ka je bangaren rajista, ka zabi kwasashenda za ka yi a wannan zangon karatu, sannan ka danna 'submit' domin amincewar mai ba ka shawara (advisor).",
+      "category": "Academics",
+      "language": "hausa"
+    },
+    {
+      "id": "5",
+      "question": "Mene ne bukatun sabbin dalibai?",
+      "answer": "Sabbin dalibai suna bukatar wasikar shiga makaranta ta JAMB, sakamakon O-level, takardar haifuwa, da shaida daga jihar su domin tantancewa.",
+      "category": "Admission",
+      "language": "hausa"
+    },
+    {
+      "id": "6",
+      "question": "كيف يمكنني التسجيل في الدورات؟",
+      "answer": "سجل الدخول إلى بوابة الطالب، وانتقل إلى علامة تبويب التسجيل، واختر مقرراتك الدراسية للفصل الدراسي، ثم انقر فوق إرسال لموافقة المستشار.",
+      "category": "Academics",
+      "language": "arabic"
+    }
+  ],
+  "departments": [
+    {
+      "id": "d1",
+      "name": "Computer Science",
+      "faculty": "Computing",
+      "hodName": "Dr. Ahmed Bello",
+      "hodContact": "cs.hod@fudma.edu.ng",
+      "officeLocation": "Computing Complex, Floor 1, Room 102"
+    },
+    {
+      "id": "d2",
+      "name": "Biological Sciences",
+      "faculty": "Life Sciences",
+      "hodName": "Prof. Sarah Musa",
+      "hodContact": "bio.hod@fudma.edu.ng",
+      "officeLocation": "Sciences Wing B, Ground Floor"
+    },
+    {
+      "id": "d3",
+      "name": "Economics",
+      "faculty": "Social Sciences",
+      "hodName": "Dr. Ibrahim Kaita",
+      "hodContact": "econ.hod@fudma.edu.ng",
+      "officeLocation": "Social Sciences Block, Room 205"
+    }
+  ],
+  "contacts": [
+    {
+      "id": "c1",
+      "officeName": "Admissions Office",
+      "contactEmail": "admissions@fudma.edu.ng",
+      "contactPhone": "08012345678",
+      "officeLocation": "Senate Building, Ground Floor"
+    },
+    {
+      "id": "c2",
+      "officeName": "Bursary Department",
+      "contactEmail": "bursary@fudma.edu.ng",
+      "contactPhone": "08087654321",
+      "officeLocation": "Administrative Block A"
+    },
+    {
+      "id": "c3",
+      "officeName": "ICT Center",
+      "contactEmail": "ict@fudma.edu.ng",
+      "contactPhone": "08000011122",
+      "officeLocation": "Library Annex"
+    }
+  ],
+  "academicInfo": [
+    {
+      "id": "a1",
+      "title": "Grading System",
+      "content": "FUDMA uses a 5.0 CGPA scale. A: 5.0 (70-100), B: 4.0 (60-69), C: 3.0 (50-59), D: 2.0 (45-49), E: 1.0 (40-44), F: 0.0 (0-39).",
+      "category": "Examination",
+      "language": "english"
+    },
+    {
+      "id": "a2",
+      "title": "Tsarin Maki (Grading)",
+      "content": "FUDMA tana amfani da ma'aunin CGPA 5.0. 'A' ita ce 5.0 (daga maki 70-100), yayin da 'F' ita ce 0.0 (daga maki 0-39).",
+      "category": "Examination",
+      "language": "hausa"
+    }
+  ]
+}
