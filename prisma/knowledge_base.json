@@ -22,6 +22,34 @@
       "language": "english"
     },
     {
+      "id": "7",
+      "question": "What is the cut-off mark for Computer Science?",
+      "answer": "The JAMB cut-off mark for Computer Science at FUDMA is typically 180 and above, but this may vary depending on the annual university admission policy.",
+      "category": "Admission",
+      "language": "english"
+    },
+    {
+      "id": "8",
+      "question": "When does the next semester start?",
+      "answer": "The next semester is scheduled to begin on Monday, September 14th. Please check the student portal for the full academic calendar.",
+      "category": "Academics",
+      "language": "english"
+    },
+    {
+      "id": "9",
+      "question": "How can I check my semester results?",
+      "answer": "You can check your results by logging into the FUDMA Student Portal with your matric number and password, then navigating to the Examinations section.",
+      "category": "Academics",
+      "language": "english"
+    },
+    {
+      "id": "10",
+      "question": "Where is the student clinic located?",
+      "answer": "The University Health Services Center (Clinic) is located near the student hostels, behind the Faculty of Agriculture building.",
+      "category": "Student Welfare",
+      "language": "english"
+    },
+    {
       "id": "4",
       "question": "Yaya ake yin rajistar kwas?",
       "answer": "Shiga cikin shafin dalibai (portal), sannan ka je bangaren rajista, ka zabi kwasashenda za ka yi a wannan zangon karatu, sannan ka danna 'submit' domin amincewar mai ba ka shawara (advisor).",

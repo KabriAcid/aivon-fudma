@@ -7,6 +7,7 @@ import SummaryPage from "./pages/SummaryPage";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import { Toaster } from "sonner";
+import { BackendStatusIndicator } from "@/hooks/useBackendStatus";
 
 export default function App() {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -28,6 +29,7 @@ export default function App() {
           </Routes>
         </main>
         {!isCallActive && <Footer />}
+        <BackendStatusIndicator />
       </div>
     </Router>
   );

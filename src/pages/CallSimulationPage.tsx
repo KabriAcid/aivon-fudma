@@ -161,6 +161,16 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
     }
   };
 
+  const toggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    if (newMuted) {
+      stopListening();
+    } else if (callState === "active" && !isSpeaking && !isThinking) {
+      startListening();
+    }
+  };
+
   const handleDial = (number: string) => {
     if (callState === "active") {
       if (number === "1" || number.endsWith("1")) {
@@ -234,12 +244,31 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
     
     recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
-      setMessages(prev => [...prev, { role: "user", content: transcript }]);
-      processInput(transcript);
+      if (transcript.trim()) {
+        setMessages(prev => [...prev, { role: "user", content: transcript }]);
+        processInput(transcript);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-restart if still active and not speaking
+      if (callState === "active" && !isMuted && !isSpeaking && !isThinking) {
+        // Short delay to prevent rapid cycling
+        setTimeout(() => {
+          if (callState === "active" && !isMuted && !isSpeaking && !isThinking) {
+            try { recognition.start(); } catch(e) {}
+          }
+        }, 300);
+      }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("Recognition already started or failed:", e);
+    }
   };
 
   const stopListening = () => {
@@ -275,15 +304,15 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
         Focus on student registration, courses, campus life, and general inquiries.
       `;
 
-      const response = await aiRef.current.getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
-        contents: [{ role: 'user', parts: [{ text }] }],
-        generationConfig: {
-          maxOutputTokens: 500,
+      const response = await aiRef.current.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: text,
+        config: {
+          systemInstruction: systemInstruction,
         }
       });
       
-      const result = await response.response;
-      const assistantMessage = result.text() || "I'm sorry, I couldn't process that.";
+      const assistantMessage = response.text || "I'm sorry, I couldn't process that.";
       handleAssistantResponse(assistantMessage);
 
     } catch (error) {
@@ -330,8 +359,17 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
     utterance.pitch = 1.1; // Slightly higher pitch for female-leaning sound if default is used
     utterance.rate = 0.95; // Clearer pace
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      stopListening(); // Stop listening while speaking to avoid echo
+    };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Resume listening after speaking finishes
+      if (callState === "active" && !isMuted) {
+        startListening();
+      }
+    };
     window.speechSynthesis.speak(utterance);
   };
 
@@ -435,7 +473,7 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
                   <div className="grid grid-cols-3 gap-6 md:gap-8 w-fit mx-auto p-2">
                      <Button 
                        variant="ghost"
-                       onClick={() => setIsMuted(!isMuted)}
+                       onClick={toggleMute}
                        className={cn(
                          "flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border transition-all p-0",
                          isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/5 text-text-secondary hover:text-white"

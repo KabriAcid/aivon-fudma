@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Activity, AlertCircle, Check } from "lucide-react";
 
 interface BackendStatus {
@@ -105,7 +105,7 @@ export function useBackendStatus() {
  * Backend Status Indicator Component
  * Shows real-time connection status for debugging
  */
-export function BackendStatusIndicator() {
+export function BackendStatusIndicator(): React.JSX.Element {
   const status = useBackendStatus();
 
   const getStatusColor = (connected: boolean) => {
