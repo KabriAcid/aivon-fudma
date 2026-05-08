@@ -63,7 +63,7 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
 
   useEffect(() => {
     aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (callState === "active") {
         e.preventDefault();
@@ -257,14 +257,15 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
         Focus on student registration, courses, campus life, and general inquiries.
       `;
 
-      const model = aiRef.current.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: systemInstruction 
+      const response = await aiRef.current.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: text,
+        config: {
+          systemInstruction: systemInstruction
+        }
       });
 
-      const result = await model.generateContent(text);
-      const response = await result.response;
-      const assistantMessage = response.text() || "I'm sorry, I couldn't process that.";
+      const assistantMessage = response.text || "I'm sorry, I couldn't process that.";
       handleAssistantResponse(assistantMessage);
 
     } catch (error) {

@@ -1,12 +1,12 @@
 # Aivon (AI Voice of Network)
 
-Aivon is a premium, production-quality AI voice assistant system designed for the Federal University Dutsin-Ma (FUDMA). It provides bilingual (English & Hausa) student support through a simulated telecom voice interaction experience.
+Aivon is a premium, production-quality AI voice assistant system designed for the Federal University Dutsin-Ma (FUDMA). It provides trilingual (English, Hausa & Arabic) student support through a simulated telecom voice interaction experience.
 
 ## Features
 
 - **Premium Telecom UI**: Sleek, futuristic dark-themed interface with glassmorphism and soft glow effects.
 - **Voice Simulation**: Dial 800 to interact with Aivon using browser-native Speech-to-Text and Text-to-Speech.
-- **Bilingual Intelligence**: Supports queries in both English and Hausa, powered by Google Gemini AI.
+- **Trilingual Intelligence**: Supports queries in English, Hausa, and Arabic, powered by Google Gemini AI.
 - **Real-time Visualization**: Animated waveforms and live transcripts track the conversation flow.
 - **Architectural Transparency**: Detailed visualization of the AI pipeline and system infrastructure.
 - **Persistence**: Conversation history and sessions are stored using Prisma and SQLite.
@@ -56,7 +56,7 @@ Aivon is a premium, production-quality AI voice assistant system designed for th
 2. Navigate to the **Simulation** page.
 3. Use the dial pad to dial **800**.
 4. Once the call is active, click the **Microphone** icon to speak.
-5. Select your preferred language (English/Hausa) from the language selector.
+5. Select your preferred language (English/Hausa/Arabic) from the language selector or dial pad.
 6. Aivon will process your speech, display it in the transcript, and respond with synthesized voice.
 
 ---

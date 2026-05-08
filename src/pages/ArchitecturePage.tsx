@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Mic, Cpu, MessageSquare, Volume2, Network, Server, Database, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export default function ArchitecturePage() {
   const steps = [

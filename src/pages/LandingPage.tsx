@@ -27,7 +27,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="max-w-2xl mx-auto text-text-secondary text-lg md:text-xl mb-12">
-              Bilingual AI assistant designed to streamline student interaction through a premium telecom-inspired voice experience.
+              Trilingual AI assistant designed to streamline student interaction through a premium telecom-inspired voice experience.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -57,11 +57,11 @@ export default function LandingPage() {
               <div>
                 <h2 className="text-4xl font-bold mb-8 tracking-tight">Voice AI Interface</h2>
                 <p className="text-text-secondary mb-10 text-lg leading-relaxed">
-                  Aivon uses advanced LLMs and Speech Synthesis to provide human-like assistance in both English and Hausa.
+                  Aivon uses advanced LLMs and Speech Synthesis to provide human-like assistance in English, Hausa, and Arabic.
                 </p>
                 <div className="grid gap-6">
                   {[
-                    { icon: Globe, title: "Bilingual Support", desc: "English & Hausa fluency" },
+                    { icon: Globe, title: "Trilingual Support", desc: "English, Hausa & Arabic fluency" },
                     { icon: Zap, title: "Low Latency", desc: "Real-time processing" },
                     { icon: Shield, title: "Verified Hub", desc: "FUDMA Academic Data" },
                   ].map((f, i) => (

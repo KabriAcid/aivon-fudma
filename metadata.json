@@ -1,6 +1,6 @@
 {
   "name": "Aivon",
-  "description": "Premium AI-powered bilingual (English & Hausa) telecom-inspired student support assistant for Federal University Dutsin-Ma (FUDMA).",
+  "description": "Premium AI-powered trilingual (English, Hausa & Arabic) telecom-inspired student support assistant for Federal University Dutsin-Ma (FUDMA).",
   "requestFramePermissions": [
     "microphone"
   ],

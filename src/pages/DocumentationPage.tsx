@@ -16,7 +16,7 @@ export default function DocumentationPage() {
           <span className="text-text-secondary">System Protocols</span>
         </h1>
         <p className="text-xl text-text-secondary leading-relaxed">
-          Aivon is a next-generation voice intelligence system designed for Federal University Dutsin-Ma (FUDMA). It bridges the gap between students and university services through real-time, multilingual AI communication.
+          Aivon is a next-generation voice intelligence system designed for Federal University Dutsin-Ma (FUDMA). It bridges the gap between students and university services through real-time, trilingual AI communication.
         </p>
       </motion.div>
 
