@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Phone, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { playDTMF } from "@/util/audio";
 
 interface DialPadProps {
   onDial: (number: string) => void;
@@ -10,6 +11,7 @@ export default function DialPad({ onDial }: DialPadProps) {
   const [number, setNumber] = useState("");
 
   const handlePress = (digit: string) => {
+    playDTMF(digit);
     setNumber(prev => prev + digit);
   };
 

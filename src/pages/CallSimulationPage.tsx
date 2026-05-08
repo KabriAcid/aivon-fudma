@@ -1,17 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Mic, MicOff, PhoneOff, Globe, Volume2, User, MessageCircle, Network } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Globe, Volume2, User, MessageCircle, Network, ChevronLeft, Speaker, Disc, LayoutList, GripVertical, Hash } from "lucide-react";
 import DialPad from "@/components/DialPad";
 import Waveform from "@/components/Waveform";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { GoogleGenAI } from "@google/genai";
 
 type CallState = "idle" | "dialing" | "active" | "ended";
@@ -22,7 +20,11 @@ interface Message {
   content: string;
 }
 
-export default function CallSimulationPage() {
+interface CallSimulationPageProps {
+  onCallStateChange?: (isActive: boolean) => void;
+}
+
+export default function CallSimulationPage({ onCallStateChange }: CallSimulationPageProps) {
   const [callState, setCallState] = useState<CallState>("idle");
   const [language, setLanguage] = useState<Language>("english");
   const [duration, setDuration] = useState(0);
@@ -30,7 +32,14 @@ export default function CallSimulationPage() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
+  const [hasGreeted, setHasGreeted] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -38,27 +47,54 @@ export default function CallSimulationPage() {
 
   useEffect(() => {
     aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-  }, []);
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (callState === "active") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [callState]);
 
   useEffect(() => {
-    if (callState === "active") {
+    onCallStateChange?.(callState === "active" || callState === "dialing");
+
+    if (callState === "active" && !hasGreeted) {
       timerRef.current = setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
       
-      handleAssistantResponse(
-        language === "english" 
-          ? "Aivon here. How can I assist you with your FUDMA studies today?" 
-          : "Aivon ne. Ta yaya zan iya taimaka muku da karatun ku na FUDMA a yau?"
-      );
+      const welcomeMsg = language === "english" 
+        ? "Welcome to Federal University Dutsin-Ma Voice Assistant. To continue in Hausa, press 1. How can I assist you with your studies today?" 
+        : "Barka da zuwa mataimakin muryar Jami'ar Dutsin-Ma. Don ci gaba da Hausa, danna daya. Ta yaya zan taimake ku da karatun ku yau?";
+      
+      handleAssistantResponse(welcomeMsg);
+      setHasGreeted(true);
+    } else if (callState === "active") {
+      // Just keep timer if already greeted
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          setDuration(prev => prev + 1);
+        }, 1000);
+      }
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
       setDuration(0);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [callState]);
+  }, [callState, onCallStateChange]);
 
   const handleDial = (number: string) => {
+    if (callState === "active") {
+      if (number.endsWith("1")) {
+        setLanguage("hausa");
+      }
+      return;
+    }
+
     if (number === "800") {
       setCallState("dialing");
       setTimeout(() => setCallState("active"), 2000);
@@ -69,6 +105,7 @@ export default function CallSimulationPage() {
 
   const handleEndCall = () => {
     setCallState("ended");
+    setHasGreeted(false);
     stopListening();
     window.speechSynthesis.cancel();
     setTimeout(() => {
@@ -159,7 +196,10 @@ export default function CallSimulationPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 flex-grow flex flex-col items-center">
+    <div className={cn(
+      "max-w-7xl mx-auto px-4 w-full flex-grow flex flex-col items-center justify-center transition-all duration-500 overflow-hidden",
+      callState === 'active' || callState === 'dialing' ? "h-screen bg-[#050505] overflow-hidden fixed inset-0 z-[100] px-8 py-12" : "py-8"
+    )}>
       <AnimatePresence mode="wait">
         {callState === "idle" && (
           <motion.div
@@ -169,6 +209,17 @@ export default function CallSimulationPage() {
             exit={{ opacity: 0, scale: 0.9 }}
             className="w-full flex flex-col items-center py-12"
           >
+            <div className="w-full max-w-xs flex justify-start mb-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-text-secondary hover:text-white group"
+                onClick={() => window.history.back()}
+              >
+                <ChevronLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                Back
+              </Button>
+            </div>
             <h2 className="text-[10px] font-bold mb-8 text-text-secondary uppercase tracking-[4px]">Network: FUDMA Node-01</h2>
             <DialPad onDial={handleDial} />
             <p className="mt-8 text-white/20 text-xs font-mono tracking-widest uppercase">Dial 800 for Aivon Voice Assistant</p>
@@ -178,143 +229,216 @@ export default function CallSimulationPage() {
         {(callState === "dialing" || callState === "active" || callState === "ended") && (
           <motion.div
             key="call"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full h-full lg:grid lg:grid-cols-[280px_1fr_280px] gap-6"
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={cn(
+              "w-full h-full max-w-5xl mx-auto relative flex flex-col items-center justify-center transition-all duration-700",
+              showTranscript ? "lg:grid lg:grid-cols-[1fr_400px] gap-8" : "max-w-2xl"
+            )}
           >
-            {/* Left: Call Controls */}
-            <aside className="bg-surface border border-border rounded-[32px] p-6 flex flex-col gap-6 backdrop-blur-xl mb-6 lg:mb-0">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-text-secondary">Line 01</span>
-                <Badge variant="outline" className="text-accent border-accent/20 bg-accent/5">
-                  {callState.toUpperCase()}
-                </Badge>
+            {/* Top info bar */}
+            <div className="absolute top-8 left-0 right-0 flex justify-between items-center px-6 w-full z-10">
+               <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-text-secondary hover:text-white rounded-xl bg-white/5 border border-border group"
+                onClick={() => setShowConfirmCancel(true)}
+              >
+                <ChevronLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                Back
+              </Button>
+              <div className="bg-white/5 px-4 py-2 rounded-2xl border border-border flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                <span className="text-[10px] uppercase font-bold tracking-[2px]">Line Security Active</span>
               </div>
-              
-              <div className="bg-white/5 p-1 rounded-2xl flex">
-                <button 
-                  onClick={() => setLanguage("english")}
-                  className={cn(
-                    "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all",
-                    language === "english" ? "bg-accent text-white" : "text-text-secondary hover:text-white"
-                  )}
-                >
-                  English
-                </button>
-                <button 
-                  onClick={() => setLanguage("hausa")}
-                  className={cn(
-                    "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all",
-                    language === "hausa" ? "bg-accent text-white" : "text-text-secondary hover:text-white"
-                  )}
-                >
-                  Hausa
-                </button>
-              </div>
+            </div>
 
-              <div>
-                <span className="text-[10px] uppercase tracking-widest text-text-secondary font-bold mb-4 block">Quick Actions</span>
-                <div className="flex flex-col gap-2">
-                  {["Course Registration", "Exam Schedule", "Department Info"].map(action => (
-                    <button key={action} className="text-left px-4 py-3 rounded-xl bg-white/5 border border-border text-xs text-text-secondary hover:bg-white/10 hover:text-white transition-all">
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-auto pt-6 border-t border-border">
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={isListening ? stopListening : startListening}
-                    variant={isListening ? "destructive" : "outline"}
-                    className="flex-1 rounded-xl h-12 border-border"
-                  >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                  </Button>
-                  <Button 
-                    onClick={handleEndCall}
-                    className="bg-red-500 hover:bg-red-600 text-white flex-1 rounded-xl h-12 shadow-lg shadow-red-500/20"
-                  >
-                    <PhoneOff className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-            </aside>
-
-            {/* Middle: AI Orb & Stage */}
-            <main className="bg-gradient-to-b from-[#1a2e1a]/30 to-bg border border-border rounded-[40px] p-12 flex flex-col items-center justify-center gap-12 relative overflow-hidden min-h-[500px]">
+            {/* Main Stage */}
+            <main className="w-full bg-transparent p-4 lg:p-8 flex flex-col items-center justify-center gap-10 relative overflow-hidden h-full backdrop-blur-3xl transition-all">
               <div className="text-center">
-                <div className="font-mono text-5xl tracking-[4px] font-bold text-white mb-2">
+                <div className="font-mono text-6xl lg:text-8xl tracking-tight font-bold text-white mb-2 transition-all">
                   {formatDuration(duration)}
                 </div>
-                <div className="text-[10px] uppercase tracking-[4px] text-accent animate-pulse">● Active Connection</div>
+                <div className="text-[10px] uppercase tracking-[6px] text-accent font-bold opacity-40 ml-1">
+                   ENCRYPTED SIGNAL
+                </div>
               </div>
 
               <div className="relative group">
-                <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-125 transition-transform duration-1000 group-hover:scale-150" />
+                <div className="absolute inset-0 bg-accent/10 blur-[100px] rounded-full scale-110 transition-transform duration-1000 group-hover:scale-125" />
                 <div className={cn(
-                  "relative w-48 h-48 rounded-full border-2 border-accent transition-all duration-500 flex items-center justify-center shadow-[0_0_50px_var(--color-accent-glow)] bg-[#050505]/50 backdrop-blur-sm",
-                  isThinking && "scale-110",
-                  isSpeaking && "border-white"
+                  "relative w-44 h-44 lg:w-64 lg:h-64 rounded-full border border-white/5 transition-all duration-700 flex items-center justify-center bg-white/[0.02] backdrop-blur-2xl",
+                  isThinking && "scale-105",
+                  isSpeaking && "scale-110 bg-accent/5 border-accent/20 shadow-[0_0_80px_var(--color-accent-glow)]"
                 )}>
-                  <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={12} />
+                  <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={20} />
                 </div>
               </div>
 
-              <div className="text-center">
-                <h2 className="text-3xl font-bold mb-2">Aivon Assistant</h2>
-                <p className="text-text-secondary text-sm">
-                  {isThinking ? "Processing network protocols..." : isSpeaking ? "Transmitting response..." : "Listening for student inquiry..."}
-                </p>
+              <div className="text-center w-full">
+                <h2 className="text-2xl font-bold mb-4">Aivon Assistant</h2>
+                
+                {/* Action Grid */}
+                <div className="grid grid-cols-3 gap-3 w-full max-w-sm mx-auto">
+                   <Button 
+                     variant="ghost"
+                     onClick={() => setIsMuted(!isMuted)}
+                     className={cn(
+                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/5 text-text-secondary hover:text-white"
+                     )}
+                   >
+                     {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                     <span className="text-[8px] font-bold uppercase tracking-widest">Mute</span>
+                   </Button>
+
+                   <Button 
+                     variant="ghost"
+                     onClick={() => setShowKeypad(true)}
+                     className="flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border bg-white/5 text-text-secondary hover:text-white transition-all"
+                   >
+                     <Hash className="w-4 h-4" />
+                     <span className="text-[8px] font-bold uppercase tracking-widest">Keypad</span>
+                   </Button>
+
+                   <Button 
+                     variant="ghost"
+                     onClick={() => setIsSpeakerOn(!isSpeakerOn)}
+                     className={cn(
+                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       isSpeakerOn ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
+                     )}
+                   >
+                     <Speaker className="w-4 h-4" />
+                     <span className="text-[8px] font-bold uppercase tracking-widest">Speaker</span>
+                   </Button>
+
+                   <Button 
+                     variant="ghost"
+                     onClick={() => setIsRecording(!isRecording)}
+                     className={cn(
+                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       isRecording ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-white/5 text-text-secondary hover:text-white"
+                     )}
+                   >
+                     <Disc className={cn("w-4 h-4", isRecording && "animate-pulse")} />
+                     <span className="text-[8px] font-bold uppercase tracking-widest">Record</span>
+                   </Button>
+
+                   <Button 
+                     variant="ghost"
+                     onClick={() => setShowTranscript(!showTranscript)}
+                     className={cn(
+                       "flex flex-col h-16 rounded-full aspect-square p-0 gap-1 border border-border transition-all",
+                       showTranscript ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
+                     )}
+                   >
+                     <LayoutList className="w-4 h-4" />
+                     <span className="text-[8px] font-bold uppercase tracking-widest">Logs</span>
+                   </Button>
+
+                   <Button 
+                     onClick={() => setShowConfirmCancel(true)}
+                     className="bg-red-500 hover:bg-red-600 text-white flex flex-col h-16 rounded-full aspect-square p-0 gap-1 shadow-xl shadow-red-500/20"
+                   >
+                     <PhoneOff className="w-4 h-4" />
+                     <span className="text-[8px] font-bold uppercase tracking-widest">End</span>
+                   </Button>
+                </div>
               </div>
             </main>
 
-            {/* Right: Transcript */}
-            <aside className="bg-surface border border-border rounded-[32px] overflow-hidden flex flex-col backdrop-blur-xl h-full">
-              <div className="px-6 py-4 border-b border-border bg-white/5 flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-accent" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Live Transcript</span>
-              </div>
-              <ScrollArea className="flex-grow p-6">
-                <div className="space-y-6">
-                  {messages.length === 0 && (
-                    <div className="h-40 flex items-center justify-center text-white/20 italic text-xs">
-                      Connecting to FUDMA Node...
-                    </div>
+            {/* Transcript (Side Panel / Mobile Below) */}
+            <AnimatePresence>
+              {showTranscript && (
+                <motion.aside 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={cn(
+                    "flex flex-col bg-surface border border-border rounded-[40px] overflow-hidden backdrop-blur-3xl shadow-2xl transition-all",
+                    "lg:h-[700px] w-full",
+                    !showTranscript && "hidden"
                   )}
-                  {messages.map((m, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn(
-                        "flex flex-col",
-                        m.role === 'user' ? "items-end" : "items-start"
+                >
+                  <div className="px-6 py-5 border-b border-border bg-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-accent" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Network History</span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setShowTranscript(false)} className="h-6 w-6 p-0 text-text-secondary">
+                      ×
+                    </Button>
+                  </div>
+                  <ScrollArea className="flex-grow p-6 min-h-[300px]">
+                    <div className="space-y-6">
+                      {messages.length === 0 && (
+                        <div className="h-60 flex flex-col items-center justify-center text-white/10 italic text-xs gap-4">
+                          <Disc className="w-12 h-12 opacity-10 animate-spin-slow" />
+                          Awaiting Signal Initialization...
+                        </div>
                       )}
-                    >
-                      <div className={cn(
-                        "max-w-[90%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed",
-                        m.role === 'user' 
-                          ? "bg-white/5 border border-border rounded-tr-none text-text-secondary" 
-                          : "bg-accent/10 border border-accent/20 rounded-tl-none text-white shadow-sm"
-                      )}>
-                        {m.content}
-                      </div>
-                    </motion.div>
-                  ))}
-                  {isThinking && (
-                    <div className="flex items-center gap-2 text-text-secondary text-[10px] uppercase font-bold tracking-widest animate-pulse">
-                      Aivon is processing
+                      {messages.map((m, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={cn(
+                            "flex flex-col",
+                            m.role === 'user' ? "items-end" : "items-start"
+                          )}
+                        >
+                          <div className={cn(
+                            "max-w-[90%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed shadow-sm",
+                            m.role === 'user' 
+                              ? "bg-white/5 border border-border rounded-tr-none text-text-secondary" 
+                              : "bg-accent/10 border border-accent/20 rounded-tl-none text-white"
+                          )}>
+                            {m.content}
+                          </div>
+                        </motion.div>
+                      ))}
+                      {isThinking && (
+                        <div className="flex items-center gap-2 text-text-secondary text-[10px] uppercase font-bold tracking-[2px] animate-pulse">
+                          <Disc className="w-3 h-3 animate-spin" />
+                          Aivon Processing Data
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </aside>
+                  </ScrollArea>
+                </motion.aside>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog 
+        isOpen={showConfirmCancel}
+        onClose={() => setShowConfirmCancel(false)}
+        onConfirm={handleEndCall}
+        title="Cancel Call?"
+        description="This will disconnect the secure network link and end the session."
+        confirmText="End Session"
+        cancelText="Stay Connected"
+        variant="destructive"
+      />
+
+      <Dialog open={showKeypad} onOpenChange={setShowKeypad}>
+        <DialogContent className="bg-surface/90 backdrop-blur-xl border-border max-w-sm rounded-[40px] p-8">
+          <div className="flex flex-col items-center">
+            <h2 className="text-[10px] font-bold mb-6 text-text-secondary uppercase tracking-[4px]">In-Call Keypad</h2>
+            <DialPad onDial={(val) => {
+              handleDial(val);
+              // if it's a single digit dial from in-call modal, we might want to stay open or close
+            }} />
+            <Button variant="ghost" className="mt-6 text-text-secondary uppercase text-[10px] tracking-widest" onClick={() => setShowKeypad(false)}>
+              Close Keypad
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

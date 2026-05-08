@@ -37,8 +37,8 @@ export default function LandingPage() {
                   <Phone className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
-              <Link to="/architecture">
-                <Button variant="outline" size="lg" className="border-border hover:bg-white/5 rounded-full h-14 px-10 text-[13px] font-bold uppercase tracking-[2px] transition-all">
+              <Link to="/docs">
+                <Button variant="outline" size="lg" className="border-border hover:bg-white/5 rounded-full h-14 px-10 text-[13px] font-bold uppercase tracking-[2px] transition-all text-text-secondary">
                   Documentation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>

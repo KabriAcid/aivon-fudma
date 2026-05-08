@@ -1,12 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Phone, Network, Home, Menu } from "lucide-react";
+import { Book, Network, Home, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 
 const navItems = [
   { name: "Home", path: "/", icon: Home },
-  { name: "Simulation", path: "/call", icon: Phone },
-  { name: "Architecture", path: "/architecture", icon: Network },
+  { name: "Docs", path: "/docs", icon: Book },
 ];
 
 export default function Navigation() {
