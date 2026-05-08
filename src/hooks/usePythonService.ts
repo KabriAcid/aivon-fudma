@@ -17,7 +17,7 @@ interface SessionData {
 export function usePythonService() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pythonUrl = "http://localhost:5000";
+  const pythonUrl = "/api/python";
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Test connection to Python service
@@ -59,7 +59,7 @@ export function usePythonService() {
       // Try Python service first
       if (isConnected) {
         try {
-          const response = await fetch(`${pythonUrl}/api/generate-response`, {
+          const response = await fetch(`${pythonUrl}/generate-response`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -125,7 +125,7 @@ export function usePythonService() {
       }
 
       try {
-        const response = await fetch(`${pythonUrl}/api/analyze`, {
+        const response = await fetch(`${pythonUrl}/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),

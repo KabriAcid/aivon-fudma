@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
-import { createAIOrchestrationService } from "./src/services/orchestration.js";
+import { createAIOrchestrationService } from "./server/services/orchestration.js";
 
 dotenv.config();
 
@@ -31,6 +31,47 @@ async function startServer() {
   // Basic Health Check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Python Proxy health
+  app.get("/api/python/health", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:5000/health");
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(502).json({ error: "Python service unreachable" });
+    }
+  });
+
+  // Python Proxy generate-response
+  app.post("/api/python/generate-response", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/generate-response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(502).json({ error: "Python service error" });
+    }
+  });
+
+  // Python Proxy analyze
+  app.post("/api/python/analyze", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(502).json({ error: "Python service error" });
+    }
   });
 
   // AI Chat Endpoint

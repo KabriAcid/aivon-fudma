@@ -63,7 +63,7 @@ export function useBackendStatus() {
       // Check Python backend
       const pythonStart = performance.now();
       try {
-        const pythonResponse = await fetch("http://localhost:5000/health", {
+        const pythonResponse = await fetch("/api/python/health", {
           method: "GET",
           signal: AbortSignal.timeout(3000),
         });

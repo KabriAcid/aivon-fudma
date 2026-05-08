@@ -12,7 +12,6 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { GoogleGenAI } from "@google/genai";
 import { useKnowledgeAssistant } from "@/hooks/useKnowledgeAssistant";
 import { SourceAttribution } from "@/components/SourceAttribution";
 import { Language } from "@/types";
@@ -56,7 +55,6 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const aiRef = useRef<any>(null);
 
   useEffect(() => {
     if (showTranscript && messages.length > 0) {
@@ -66,8 +64,6 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   }, [messages, showTranscript, isThinking]);
 
   useEffect(() => {
-    aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (callState === "active") {
         e.preventDefault();
@@ -278,46 +274,28 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const processInput = async (text: string) => {
     setIsThinking(true);
     try {
-      // 1. Attempt institutional knowledge-augmented processing
+      // 1. Attempt institutional knowledge-augmented processing (calling server-side via hook)
       try {
         const result = await query(text, language, sessionId);
         handleAssistantResponse(result.response);
         return;
       } catch (knowledgeError) {
-        console.warn("Knowledge system bypassed or failed:", knowledgeError);
-        // Fallback to direct Gemini API
+        console.warn("Knowledge system failure, trying standard chat:", knowledgeError);
+        
+        // 2. Fallback to standard server-side chat if orchestration is failing or context is missing
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, language }),
+        });
+
+        if (!res.ok) throw new Error("Server chat failed");
+        const data = await res.json();
+        handleAssistantResponse(data.message || "I'm sorry, I'm having trouble connecting right now.");
       }
-
-      if (!aiRef.current) {
-        handleAssistantResponse("Sorry, AI system is currently unavailable.");
-        return;
-      }
-
-      const systemInstruction = `
-        You are Aivon (AI Voice of Network), a premium AI telecom assistant for the Federal University Dutsin-Ma (FUDMA).
-        Your goal is to assist students with their academic and administrative queries.
-        Current Language: ${language}.
-        If language is hausa, respond strictly in Hausa.
-        If language is english, respond strictly in English.
-        If language is arabic, respond strictly in Arabic.
-        Be concise, supportive, and professional.
-        Focus on student registration, courses, campus life, and general inquiries.
-      `;
-
-      const response = await aiRef.current.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: text,
-        config: {
-          systemInstruction: systemInstruction,
-        }
-      });
-      
-      const assistantMessage = response.text || "I'm sorry, I couldn't process that.";
-      handleAssistantResponse(assistantMessage);
-
     } catch (error) {
-      console.error(error);
-      handleAssistantResponse("Sorry, system network error.");
+      console.error("Process Input Error:", error);
+      handleAssistantResponse("Sorry, I'm experiencing a temporary network issue. Please try again in a moment.");
     } finally {
       setIsThinking(false);
     }

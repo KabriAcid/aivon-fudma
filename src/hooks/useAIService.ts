@@ -154,7 +154,7 @@ export function useAIService(
           console.log("Falling back to HTTP for streaming request");
           // HTTP fallback
           const response = await fetch(
-            "http://localhost:5000/api/generate-response",
+            "/api/python/generate-response",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -200,7 +200,7 @@ export function useAIService(
           console.log("Falling back to HTTP for quick request");
           // HTTP fallback
           const response = await fetch(
-            "http://localhost:5000/api/generate-response",
+            "/api/python/generate-response",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -242,7 +242,7 @@ export function useAIService(
         } else {
           console.log("Analyzing via HTTP fallback");
           // HTTP fallback
-          const response = await fetch("http://localhost:5000/api/analyze", {
+          const response = await fetch("/api/python/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text }),
