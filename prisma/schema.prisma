@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Department Model
+model Department {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  faculty         String
+  hodName         String
+  hodContact      String
+  officeLocation  String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([faculty])
+}
+
+// FAQ Model for student support
+model FAQ {
+  id              String    @id @default(cuid())
+  question        String
+  answer          String
+  category        String    // e.g., "Academics", "Admission", "Counselling"
+  language        String    @default("english") // "english", "hausa"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([category])
+  @@index([language])
+}
+
+// Contact Information Model
+model Contact {
+  id              String    @id @default(cuid())
+  officeName      String
+  contactEmail    String
+  contactPhone    String
+  officeLocation  String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([officeName])
+}
+
+// Academic Information Model
+model AcademicInfo {
+  id              String    @id @default(cuid())
+  title           String
+  content         String
+  category        String    // e.g., "Registration", "Coursework", "Examination"
+  language        String    @default("english") // "english", "hausa"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([category])
+  @@index([language])
+}
+
+// Session Model - stores call sessions
+model Session {
+  id              String    @id @default(cuid())
+  sessionId       String    @unique
+  selectedLanguage String   @default("english")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  conversations   Conversation[]
+}
+
+// Conversation Model - stores messages within a session
+model Conversation {
+  id              String    @id @default(cuid())
+  sessionId       String
+  role            String    // "user" or "assistant"
+  message         String
+  createdAt       DateTime  @default(now())
+
+  session         Session   @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  @@index([sessionId])
+}

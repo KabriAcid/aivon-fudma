@@ -7,6 +7,7 @@ import SummaryPage from "./pages/SummaryPage";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import { Toaster } from "sonner";
+import { BackendStatusIndicator } from "./hooks/useBackendStatus";
 
 export default function App() {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -14,14 +15,22 @@ export default function App() {
   return (
     <Router>
       <Toaster position="top-center" expand={false} richColors theme="dark" />
+      <BackendStatusIndicator />
       <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans selection:bg-[#228B22]/30 selection:text-[#228B22]">
         {!isCallActive && <Navigation />}
-        <main className={cn("flex-grow flex flex-col", isCallActive && "h-screen overflow-hidden")}>
+        <main
+          className={cn(
+            "flex-grow flex flex-col",
+            isCallActive && "h-screen overflow-hidden",
+          )}
+        >
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route 
-              path="/call" 
-              element={<CallSimulationPage onCallStateChange={setIsCallActive} />} 
+            <Route
+              path="/call"
+              element={
+                <CallSimulationPage onCallStateChange={setIsCallActive} />
+              }
             />
             <Route path="/docs" element={<DocumentationPage />} />
             <Route path="/summary" element={<SummaryPage />} />

@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { createAIOrchestrationService } from "./src/services/orchestration.js";
 
 dotenv.config();
 
@@ -17,6 +18,9 @@ if (!apiKey) {
   );
 }
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const orchestrationService = apiKey
+  ? createAIOrchestrationService(apiKey)
+  : null;
 
 async function startServer() {
   const app = express();
@@ -69,6 +73,40 @@ async function startServer() {
     } catch (error) {
       console.error("AI Error:", error);
       res.status(500).json({ error: "Failed to process request" });
+    }
+  });
+
+  // Institutional Knowledge-Augmented Processing
+  app.post("/api/process", async (req, res) => {
+    try {
+      const { message, language = "english", sessionId } = req.body;
+
+      if (!orchestrationService) {
+        return res
+          .status(500)
+          .json({ error: "AI orchestration service not configured." });
+      }
+
+      if (!message) {
+        return res.status(400).json({ error: "No message provided" });
+      }
+
+      const result = await orchestrationService.process({
+        message,
+        language,
+        sessionId: sessionId || `session_${Date.now()}`,
+      });
+
+      res.json({
+        response: result.response,
+        contextUsed: result.contextUsed,
+        sources: result.sources,
+      });
+    } catch (error) {
+      console.error("Processing error:", error);
+      res.status(500).json({
+        error: "Failed to process request with institutional context",
+      });
     }
   });
 
