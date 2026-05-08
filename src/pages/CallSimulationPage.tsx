@@ -126,21 +126,15 @@ export default function CallSimulationPage() {
         Focus on student registration, courses, campus life, and general inquiries.
       `;
 
-      const response = await aiRef.current.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: text,
-        config: { systemInstruction },
+      const model = aiRef.current.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        systemInstruction: systemInstruction 
       });
 
-      const assistantMessage = response.text || "I'm sorry, I couldn't process that.";
+      const result = await model.generateContent(text);
+      const response = await result.response;
+      const assistantMessage = response.text() || "I'm sorry, I couldn't process that.";
       handleAssistantResponse(assistantMessage);
-
-      // Log to backend
-      fetch("/api/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, response: assistantMessage, language, sessionId }),
-      }).catch(console.error);
 
     } catch (error) {
       console.error(error);
