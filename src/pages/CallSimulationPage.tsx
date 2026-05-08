@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Mic, MicOff, PhoneOff, Globe, Volume2, User, MessageCircle, Network, ChevronLeft, Speaker, Disc, LayoutList, GripVertical, Hash } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import DialPad from "@/components/DialPad";
 import Waveform from "@/components/Waveform";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ interface CallSimulationPageProps {
 }
 
 export default function CallSimulationPage({ onCallStateChange }: CallSimulationPageProps) {
+  const navigate = useNavigate();
   const [callState, setCallState] = useState<CallState>("idle");
   const [language, setLanguage] = useState<Language>("english");
   const [duration, setDuration] = useState(0);
@@ -36,6 +39,8 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [showKeypad, setShowKeypad] = useState(false);
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
@@ -43,6 +48,9 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
 
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const aiRef = useRef<any>(null);
 
   useEffect(() => {
@@ -91,14 +99,61 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
       setDuration(0);
+      setRecordingDuration(0);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { 
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
   }, [callState, onCallStateChange]);
+
+  const toggleRecording = async () => {
+    if (!isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setRecordedAudioUrl(url);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingDuration(0);
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+        toast.success("Recording started", { description: "Capturing session audio..." });
+      } catch (err) {
+        console.error("Failed to start recording:", err);
+        toast.error("Recording error", { description: "Microphone access is required." });
+      }
+    } else {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      toast.info("Recording saved", { description: "Session audio stored in memory." });
+    }
+  };
 
   const handleDial = (number: string) => {
     if (callState === "active") {
-      if (number.endsWith("1")) {
+      if (number === "1" || number.endsWith("1")) {
         setLanguage("hausa");
+        const msg = "Hausa protocol initialized. Ta yaya zan iya taimaka muku da karatun ku na FUDMA a yau?";
+        handleAssistantResponse(msg);
+        setShowKeypad(false);
       }
       return;
     }
@@ -107,19 +162,34 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
       setCallState("dialing");
       setTimeout(() => setCallState("active"), 2000);
     } else {
-      alert("Invalid number. Please dial 800 for Aivon.");
+      toast.error("Invalid frequency. Please dial 800 for Aivon Voice Assistant.", {
+        description: "Protocol mismatch detected."
+      });
     }
   };
 
   const handleEndCall = () => {
+    const endData = {
+      duration,
+      sessionId,
+      messageCount: messages.length,
+      transcript: messages,
+      recordedAudioUrl
+    };
+    
     setCallState("ended");
     setHasGreeted(false);
+    if (isRecording) {
+      toggleRecording();
+    }
     stopListening();
     window.speechSynthesis.cancel();
+    
     setTimeout(() => {
+      navigate("/summary", { state: endData });
       setCallState("idle");
       setMessages([]);
-    }, 3000);
+    }, 1500);
   };
 
   const formatDuration = (s: number) => {
@@ -131,7 +201,7 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported in this browser.");
+      toast.error("Speech recognition not supported", { description: "Please use a modern browser for voice features." });
       return;
     }
 
@@ -197,7 +267,30 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const speak = (text: string) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === "english" ? "en-US" : "ha-NG";
+    
+    // Attempt to find a female voice
+    const voices = window.speechSynthesis.getVoices();
+    let preferredVoice = null;
+
+    if (language === "hausa") {
+      utterance.lang = "ha-NG";
+      // Look for a voice that might be Hausa or generic female
+      preferredVoice = voices.find(v => 
+        (v.lang.startsWith("ha") || v.name.toLowerCase().includes("female")) && 
+        v.name.toLowerCase().includes("female")
+      ) || voices.find(v => v.lang.startsWith("ha"));
+    } else {
+      utterance.lang = "en-US";
+      preferredVoice = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"));
+    }
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    utterance.pitch = 1.1; // Slightly higher pitch for female-leaning sound if default is used
+    utterance.rate = 0.95; // Clearer pace
+
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
@@ -205,8 +298,8 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
 
   return (
     <div className={cn(
-      "max-w-7xl mx-auto px-4 w-full flex-grow flex flex-col items-center justify-center transition-all duration-500 overflow-hidden",
-      callState === 'active' || callState === 'dialing' ? "h-screen bg-[#050505] overflow-hidden fixed inset-0 z-[100] px-8 py-12" : "py-8"
+      "max-w-7xl mx-auto px-4 w-full flex-grow flex flex-col items-center justify-center transition-all duration-500",
+      callState === 'active' || callState === 'dialing' ? "h-screen bg-[#050505] overflow-hidden fixed inset-0 z-30 px-6 py-8 md:px-12" : "py-8"
     )}>
       <AnimatePresence mode="wait">
         {callState === "idle" && (
@@ -241,12 +334,12 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
-              "w-full h-full max-w-5xl mx-auto relative flex flex-col items-center justify-center transition-all duration-700",
+              "w-full h-full max-w-5xl mx-auto flex flex-col transition-all duration-700",
               showTranscript ? "lg:grid lg:grid-cols-[1fr_400px] gap-8" : "max-w-2xl"
             )}
           >
             {/* Top info bar */}
-            <div className="absolute top-8 left-0 right-0 flex justify-between items-center px-6 w-full z-10">
+            <div className="flex justify-between items-center w-full py-4 mb-4">
                <Button 
                 variant="ghost" 
                 size="sm" 
@@ -262,92 +355,105 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
               </div>
             </div>
 
-            {/* Main Stage */}
-            <main className="w-full bg-transparent p-4 lg:p-8 flex flex-col items-center justify-center gap-12 relative overflow-hidden h-full backdrop-blur-3xl transition-all">
-              <div className="text-center">
-                <div className="font-mono text-7xl md:text-8xl lg:text-9xl tracking-tighter font-bold text-white mb-4 transition-all">
-                  {formatDuration(duration)}
+            {/* Main Content Area */}
+            <div className="flex-grow flex flex-col items-center justify-center w-full">
+              {/* Main Stage */}
+              <main className="w-full bg-transparent flex flex-col items-center justify-center gap-6 md:gap-8 relative overflow-hidden backdrop-blur-3xl transition-all">
+                <div className="text-center">
+                  <div className="font-mono text-4xl md:text-5xl lg:text-6xl tracking-tight font-bold text-white mb-2 transition-all">
+                    {formatDuration(duration)}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-[6px] text-accent font-bold opacity-30">
+                     ENCRYPTED SIGNAL
+                  </div>
+                  {isRecording && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 flex items-center justify-center gap-2 text-red-500 font-mono text-sm"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      REC {formatDuration(recordingDuration)}
+                    </motion.div>
+                  )}
                 </div>
-                <div className="text-[10px] uppercase tracking-[8px] text-accent font-bold opacity-30 ml-2">
-                   ENCRYPTED SIGNAL
+ 
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-accent/10 blur-[80px] rounded-full scale-110 transition-transform duration-1000 group-hover:scale-125" />
+                  <div className={cn(
+                    "relative w-32 h-32 md:w-44 md:h-44 lg:w-48 lg:h-48 rounded-full border border-white/5 transition-all duration-700 flex items-center justify-center bg-white/[0.02] backdrop-blur-2xl",
+                    isThinking && "scale-105",
+                    isSpeaking && "scale-110 bg-accent/5 border-accent/20 shadow-[0_0_60px_var(--color-accent-glow)]"
+                  )}>
+                    <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={16} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="relative group">
-                <div className="absolute inset-0 bg-accent/10 blur-[120px] rounded-full scale-110 transition-transform duration-1000 group-hover:scale-125" />
-                <div className={cn(
-                  "relative w-56 h-56 md:w-72 md:h-72 lg:w-96 lg:h-96 rounded-full border border-white/5 transition-all duration-700 flex items-center justify-center bg-white/[0.02] backdrop-blur-2xl",
-                  isThinking && "scale-105",
-                  isSpeaking && "scale-110 bg-accent/5 border-accent/20 shadow-[0_0_100px_var(--color-accent-glow)]"
-                )}>
-                  <Waveform isActive={isSpeaking || isThinking} color={isSpeaking ? "#fff" : "#228B22"} count={24} />
+                <div className="text-center w-full">
+                  {/* Action Grid */}
+                  <div className="grid grid-cols-3 gap-6 md:gap-8 w-fit mx-auto p-2">
+                     <Button 
+                       variant="ghost"
+                       onClick={() => setIsMuted(!isMuted)}
+                       className={cn(
+                         "flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border transition-all p-0",
+                         isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/5 text-text-secondary hover:text-white"
+                       )}
+                     >
+                       {isMuted ? <MicOff className="w-5 h-5 md:w-6 md:h-6" /> : <Mic className="w-5 h-5 md:w-6 md:h-6" />}
+                     </Button>
+
+                     <Button 
+                       variant="ghost"
+                       onClick={() => setShowKeypad(true)}
+                       className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border bg-white/5 text-text-secondary hover:text-white transition-all p-0"
+                     >
+                       <Hash className="w-5 h-5 md:w-6 md:h-6" />
+                     </Button>
+
+                     <Button 
+                       variant="ghost"
+                       onClick={() => setIsSpeakerOn(!isSpeakerOn)}
+                       className={cn(
+                         "flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border transition-all p-0",
+                         isSpeakerOn ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
+                       )}
+                     >
+                       <Speaker className="w-5 h-5 md:w-6 md:h-6" />
+                     </Button>
+
+                     <Button 
+                       variant="ghost"
+                       onClick={toggleRecording}
+                       className={cn(
+                         "flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border transition-all p-0",
+                         isRecording ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-white/5 text-text-secondary hover:text-white"
+                       )}
+                     >
+                       <Disc className={cn("w-5 h-5 md:w-6 md:h-6", isRecording && "animate-pulse")} />
+                     </Button>
+
+                     <Button 
+                       variant="ghost"
+                       onClick={() => setShowTranscript(!showTranscript)}
+                       className={cn(
+                         "flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full border border-border transition-all p-0",
+                         showTranscript ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
+                       )}
+                     >
+                       <LayoutList className="w-5 h-5 md:w-6 md:h-6" />
+                     </Button>
+
+                     <Button 
+                       onClick={() => setShowConfirmCancel(true)}
+                       className="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full shadow-2xl shadow-red-500/30 p-0"
+                     >
+                       <PhoneOff className="w-5 h-5 md:w-6 md:h-6" />
+                     </Button>
+                  </div>
                 </div>
-              </div>
-
-              <div className="text-center w-full">
-                {/* Action Grid */}
-                <div className="grid grid-cols-3 gap-6 w-full max-w-sm mx-auto p-4">
-                   <Button 
-                     variant="ghost"
-                     onClick={() => setIsMuted(!isMuted)}
-                     className={cn(
-                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
-                       isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/5 text-text-secondary hover:text-white"
-                     )}
-                   >
-                     {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                   </Button>
-
-                   <Button 
-                     variant="ghost"
-                     onClick={() => setShowKeypad(true)}
-                     className="flex items-center justify-center w-full aspect-square rounded-full border border-border bg-white/5 text-text-secondary hover:text-white transition-all"
-                   >
-                     <Hash className="w-6 h-6" />
-                   </Button>
-
-                   <Button 
-                     variant="ghost"
-                     onClick={() => setIsSpeakerOn(!isSpeakerOn)}
-                     className={cn(
-                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
-                       isSpeakerOn ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
-                     )}
-                   >
-                     <Speaker className="w-6 h-6" />
-                   </Button>
-
-                   <Button 
-                     variant="ghost"
-                     onClick={() => setIsRecording(!isRecording)}
-                     className={cn(
-                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
-                       isRecording ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-white/5 text-text-secondary hover:text-white"
-                     )}
-                   >
-                     <Disc className={cn("w-6 h-6", isRecording && "animate-pulse")} />
-                   </Button>
-
-                   <Button 
-                     variant="ghost"
-                     onClick={() => setShowTranscript(!showTranscript)}
-                     className={cn(
-                       "flex items-center justify-center w-full aspect-square rounded-full border border-border transition-all",
-                       showTranscript ? "bg-accent/20 text-accent border-accent/30" : "bg-white/5 text-text-secondary hover:text-white"
-                     )}
-                   >
-                     <LayoutList className="w-6 h-6" />
-                   </Button>
-
-                   <Button 
-                     onClick={() => setShowConfirmCancel(true)}
-                     className="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center w-full aspect-square rounded-full shadow-2xl shadow-red-500/30"
-                   >
-                     <PhoneOff className="w-6 h-6" />
-                   </Button>
-                </div>
-              </div>
-            </main>
+              </main>
+            </div>
 
             {/* Transcript (Side Panel / Mobile Below) */}
             <AnimatePresence>
