@@ -45,7 +45,14 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
+
+  const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const aiRef = useRef<any>(null);
 
   useEffect(() => {
     if (showTranscript && messages.length > 0) {
@@ -53,11 +60,6 @@ export default function CallSimulationPage({ onCallStateChange }: CallSimulation
       anchor?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, showTranscript, isThinking]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const aiRef = useRef<any>(null);
 
   useEffect(() => {
     aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
